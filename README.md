@@ -69,11 +69,26 @@ regenerated deterministically by the acquisition scripts in `scripts/`.
 
 ## 5. Preliminary Results
 
-A purely deterministic Stage-4 overlay — buildings whose footprint intersects a
-5 m buffer about the mapped drain/canal network — identifies **114 structures
-constructed directly upon in-settlement drainage channels** within the 2020 epoch,
-without recourse to any learned model. This constitutes a proof of concept that the
-defining hazard signature is computationally legible from open data alone.
+A purely deterministic Stage-4 overlay, executed without recourse to any learned
+model, adjudicates two complementary modalities of encroachment within the 2020
+epoch: *on-drain* construction (a footprint intersecting a buffer about a mapped
+drain/canal centreline) and *riparian* construction (a footprint intersecting a
+buffer about a water-body polygon — Korle Lagoon and the Odaw channel). Because the
+tally is a monotone function of the chosen tolerance, a sensitivity sweep is
+reported in lieu of a single figure:
+
+| Modality | Tolerance | Encroaching structures |
+|----------|-----------|------------------------|
+| On-drain | 5 m | 114 |
+| Riparian | 5 m | 51 |
+| Riparian | 10 m | 159 |
+| Riparian | 20 m | 470 |
+| **Union (drain 5 m ∪ water 10 m)** | — | **273** |
+
+No structure lies *within* a mapped water polygon, an internal consistency check on
+the geometry. The union of **273 structures** encroaching upon the drainage system
+constitutes a proof of concept that the defining hazard signature is computationally
+legible from open data alone (see `docs/figures/encroachment_oldfadama_2020.png`).
 
 ## 6. Repository Structure
 
