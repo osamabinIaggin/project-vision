@@ -1,0 +1,29 @@
+# ----------------------------------------------------------------------------
+# Geospatial binary artefacts — excluded by policy.
+# These are deterministically reproducible from the acquisition scripts in
+# scripts/ and routinely exceed the platform's per-blob size ceiling. The
+# repository versions the methodology, not the raster payload.
+# ----------------------------------------------------------------------------
+*.tif
+*.tiff
+*.tif.aux.xml
+*.tif.ovr
+*.osm
+*.osm.pbf
+*.gpkg
+*.gpkg-wal
+*.gpkg-shm
+
+# Derived intermediates and scratch outputs
+/accra_flood/output/
+/scratch/
+*.png
+!docs/figures/*.png        # curated figures are retained deliberately
+
+# Operating-system and editor detritus
+.DS_Store
+.ipynb_checkpoints/
+__pycache__/
+*.pyc
+.venv/
+venv/

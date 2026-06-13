@@ -1,0 +1,27 @@
+cff-version: 1.2.0
+title: >-
+  Project VISION — Vulnerability Inference for Submersion-prone Informal
+  Settlements via Orthoimagery and Networks
+message: >-
+  If you reference this work, please cite it using the metadata below.
+type: software
+authors:
+  - given-names: Gideon
+    family-names: Glago
+abstract: >-
+  A reproducible geospatial pipeline for the high-resolution identification of
+  anthropogenic pluvial-flood drivers — obstructed drainage and built-structure
+  encroachment onto watercourses — in the Odaw–Korle catchment of Accra, Ghana,
+  employing centimetre-scale aerial orthoimagery, semantic segmentation, and
+  topology-aware overlay analysis, with Old Fadama / Agbogbloshie as the pilot
+  area of interest.
+keywords:
+  - flood susceptibility
+  - remote sensing
+  - semantic segmentation
+  - geospatial analysis
+  - urban informality
+  - Accra
+  - Odaw
+license: MIT
+date-released: 2026-06-13
