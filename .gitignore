@@ -18,7 +18,12 @@
 /accra_flood/output/
 /scratch/
 *.png
-!docs/figures/*.png        # curated figures are retained deliberately
+# Curated figures are retained deliberately (negation must be on its own line;
+# gitignore does not support trailing inline comments on pattern lines).
+!docs/figures/*.png
+# GDAL raster sidecars are never versioned
+*.msk
+*.aux.xml
 
 # Operating-system and editor detritus
 .DS_Store
