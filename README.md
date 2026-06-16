@@ -1,7 +1,35 @@
-# Project VISION — Vulnerability Inference for Submersion-prone Informal Settlements via Orthoimagery and Networks
+# VISION — Geospatial Deep Learning for Flood-Driver Detection
 
-A reproducible geospatial pipeline for the high-resolution identification of
-anthropogenic pluvial-flood drivers in the Odaw–Korle catchment of Accra, Ghana.
+> Computer vision on centimetre-scale aerial imagery to localise the *human* causes
+> of urban flooding — drainage encroachment and obstructed waterways — that
+> conventional satellite remote sensing cannot resolve.
+
+![status](https://img.shields.io/badge/status-active%20research-1f6feb)
+![method](https://img.shields.io/badge/deep%20learning-U--Net%20segmentation-d29922)
+![vision](https://img.shields.io/badge/computer%20vision-change%20detection-2da44e)
+![data](https://img.shields.io/badge/remote%20sensing-5%20cm%20GSD-8957e5)
+![license](https://img.shields.io/badge/license-MIT-8b949e)
+
+**VISION** (*Vulnerability Inference for Submersion-prone Informal settlements via
+Orthoimagery and Networks*) is an applied geospatial-AI system that couples
+**deep-learning semantic segmentation** — a **U-Net convolutional neural network** —
+with **multi-temporal change detection** and **topology-aware spatial reasoning** to
+detect and quantify the anthropogenic drivers of pluvial flooding in Accra, Ghana,
+at a resolution roughly two orders of magnitude finer than the satellite imagery on
+which prior work has relied.
+
+### Technical approach
+
+- **Semantic segmentation (U-Net / CNN)** — pixel-wise extraction of buildings,
+  drainage, and encroachment from 5 cm RGB orthomosaics
+- **Multi-temporal change detection** — 2020 vs 2024 epochs to quantify the
+  *growth* of encroachment onto watercourses
+- **Topographic flood-susceptibility modelling** — gradient-boosted / random-forest
+  ensembles over terrain morphometrics (slope, flow accumulation, TWI)
+- **Topology-aware geospatial overlay** — reconciling segmented structures against
+  the hydrographic network to rank hazard loci
+- **Reproducible by construction** — open data, scripted acquisition, and a
+  version-controlled methodology rather than committed binary payloads
 
 ---
 
