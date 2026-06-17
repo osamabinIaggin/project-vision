@@ -23,7 +23,8 @@ mkdir -p "${IMGDIR}" "${MSKDIR}"
 rm -f "${IMGDIR}"/*.png "${MSKDIR}"/*.png "${OUT}/manifest.csv"
 
 TILE="${TILE:-512}"
-ULX="${ULX:-807650}"; ULY="${ULY:-614100}"; LRX="${LRX:-808162}"; LRY="${LRY:-613588}"
+# ~1024 m square over the core settlement (was 512 m; widened for a larger corpus).
+ULX="${ULX:-807218}"; ULY="${ULY:-614412}"; LRX="${LRX:-808242}"; LRY="${LRY:-613388}"
 MIN_BLDG_MEAN="${MIN_BLDG_MEAN:-0.5}"
 
 echo "Cropping AOI window and rasterising the building mask onto an identical grid ..."
