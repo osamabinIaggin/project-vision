@@ -130,7 +130,8 @@ legible from open data alone (see `docs/figures/encroachment_oldfadama_2020.png`
 │   ├── 01_acquire_dem.sh
 │   ├── 02_acquire_oldfadama_imagery.sh
 │   ├── 03_acquire_osm_labels.sh
-│   └── 04_encroachment_overlay.sh
+│   ├── 04_encroachment_overlay.sh
+│   └── 05_build_training_tiles.sh   # Stage-2 (image, mask) tile corpus
 └── accra_flood/               # working tree (data dirs are gitignored)
     ├── data/                  # DEM (regenerated)
     └── oldfadama/             # pilot AOI imagery, labels, metadata
