@@ -1,0 +1,6 @@
+# Stage-2 deep-learning environment (Python 3.12; Apple Silicon / MPS).
+# Create with:  python3.12 -m venv .venv && .venv/bin/pip install -r requirements.txt
+torch==2.12.1
+torchvision==0.27.1
+numpy==2.4.6
+pillow==12.2.0
