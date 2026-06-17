@@ -118,6 +118,26 @@ the geometry. The union of **273 structures** encroaching upon the drainage syst
 constitutes a proof of concept that the defining hazard signature is computationally
 legible from open data alone (see `docs/figures/encroachment_oldfadama_2020.png`).
 
+### Learned building segmentation (Stage 2)
+
+A U-Net was trained to segment built-up area from the 5 cm orthoimagery, supervised
+by the OSM footprints (`scripts/05`–`07`). On an identical 1,081-tile evaluation
+split, a **pretrained ResNet-34 encoder (transfer learning) outperformed a
+from-scratch U-Net — validation IoU 0.579 vs 0.530** — consistent with the
+literature on small, label-noisy datasets. Both models converge to *coarse,
+region-level* masks rather than crisp per-footprint boundaries; controlled diagnosis
+attributes this ceiling to **label quality** (OSM footprints are offset ~1–2 m and
+merge adjacent structures in the dense settlement) rather than model capacity — train
+loss falls freely while validation plateaus.
+
+Applied to the **unseen 2024 epoch** (`scripts/08`), the model maps built-up extent
+*without any 2024 labels* (17.6 ha over the test patch), confirming label-free
+generalisation. However, naïve inter-epoch mask differencing is dominated by
+prediction flicker between independent flights and does **not** reliably localise
+individual new structures; the deterministic overlay remains the higher-fidelity
+encroachment estimator. Figures: `docs/figures/unet_predictions_resnet.png`,
+`docs/figures/change_detection_oldfadama.png`.
+
 ## 6. Repository Structure
 
 ```
@@ -131,7 +151,10 @@ legible from open data alone (see `docs/figures/encroachment_oldfadama_2020.png`
 │   ├── 02_acquire_oldfadama_imagery.sh
 │   ├── 03_acquire_osm_labels.sh
 │   ├── 04_encroachment_overlay.sh
-│   └── 05_build_training_tiles.sh   # Stage-2 (image, mask) tile corpus
+│   ├── 05_build_training_tiles.sh   # Stage-2 (image, mask) tile corpus
+│   ├── 06_train_unet.py             # from-scratch U-Net baseline
+│   ├── 07_train_unet_resnet.py      # pretrained ResNet-34 U-Net (transfer learning)
+│   └── 08_change_detection.{sh,py}  # apply model to 2020/2024, map built-up change
 └── accra_flood/               # working tree (data dirs are gitignored)
     ├── data/                  # DEM (regenerated)
     └── oldfadama/             # pilot AOI imagery, labels, metadata
@@ -149,10 +172,15 @@ the encroachment analysis from first principles.
 As the catchment's terminal sink, Old Fadama's inundation regime is partially
 governed by upstream forcing and outfall occlusion rather than purely local
 hydraulics; a model fit exclusively here risks learning a settlement-specific
-rather than a generalisable representation. Subsequent campaigns will extend the
-corpus to upstream communities (Alogboshie, Alajo, Akweteyman) and instantiate the
-Stage-2 segmentation network to obviate dependence on pre-existing vector labels,
-thereby enabling encroachment change-detection across the 2020 and 2024 epochs.
+rather than a generalisable representation. The principal empirical finding of the
+Stage-2 work is that segmentation fidelity here is **label-bound, not
+capacity-bound**: the binding constraint is the geometric quality of the OSM
+supervision, not the network. Prospective work therefore prioritises (i) refining a
+modest corpus of crisp, manually corrected building labels to lift the ceiling;
+(ii) temporally consistent change detection (co-registration plus siamese or
+post-classification methods) in place of naïve mask differencing; and (iii)
+extending the corpus to upstream communities (Alogboshie, Alajo, Akweteyman) to
+guard against a settlement-specific representation.
 
 ## 9. Licence and Citation
 
