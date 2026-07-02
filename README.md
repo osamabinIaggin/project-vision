@@ -130,6 +130,25 @@ attributes this ceiling to **label quality** (OSM footprints are offset ~1–2 m
 merge adjacent structures in the dense settlement) rather than model capacity — train
 loss falls freely while validation plateaus.
 
+The label-quality hypothesis was subsequently stress-tested from three directions
+(`scripts/09`–`12`). (i) *Recipe ablations*: stronger training recipes —
+native-resolution multi-scale crops, photometric jitter, differential
+encoder/decoder learning rates, AdamW under a warmup-cosine schedule over a
+60-epoch budget — score **0.561/0.566, below the 0.579 baseline**; the added
+optimisation capacity only memorises label noise (`scripts/09`). (ii) *Independent
+labels*: Google Open Buildings v3 footprints for the identical window
+(`scripts/11`) agree with the OSM mask at only **IoU 0.611** on the same grid, so
+the model already operates at the inter-source noise floor; Open Buildings is not
+a drop-in replacement, as it draws cleaner per-building shapes but under-detects
+in the densest blocks (`docs/figures/label_sources_oldfadama.png`).
+(iii) *Registration*: a global-shift search of the OSM mask against model
+predictions peaks at ~0.2 m — the label error is per-building and random, not a
+correctable systematic offset (`scripts/12`). The one genuine post-hoc gain is
+inference-time: **4-way flip test-time augmentation with a calibrated 0.45
+threshold lifts the transfer-learning model to IoU 0.593** at zero training cost
+(`scripts/10`). Surpassing the ≈0.6 ceiling requires cleaner supervision (e.g. a
+hand-verified label subset), not further architecture or recipe work.
+
 Applied to the **unseen 2024 epoch** (`scripts/08`), the model maps built-up extent
 *without any 2024 labels* (17.6 ha over the test patch), confirming label-free
 generalisation. However, naïve inter-epoch mask differencing is dominated by
@@ -154,7 +173,11 @@ encroachment estimator. Figures: `docs/figures/unet_predictions_resnet.png`,
 │   ├── 05_build_training_tiles.sh   # Stage-2 (image, mask) tile corpus
 │   ├── 06_train_unet.py             # from-scratch U-Net baseline
 │   ├── 07_train_unet_resnet.py      # pretrained ResNet-34 U-Net (transfer learning)
-│   └── 08_change_detection.{sh,py}  # apply model to 2020/2024, map built-up change
+│   ├── 08_change_detection.{sh,py}  # apply model to 2020/2024, map built-up change
+│   ├── 09_train_unet_v3.py          # recipe ablations (documented negative result)
+│   ├── 10_eval_tta.py               # flip TTA + threshold calibration (IoU 0.593)
+│   ├── 11_acquire_open_buildings.sh # Google Open Buildings v3 footprints for the AOI
+│   └── 12_label_noise_audit.sh      # quantifies the OSM label-noise floor
 └── accra_flood/               # working tree (data dirs are gitignored)
     ├── data/                  # DEM (regenerated)
     └── oldfadama/             # pilot AOI imagery, labels, metadata
