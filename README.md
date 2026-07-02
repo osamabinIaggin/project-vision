@@ -149,6 +149,23 @@ threshold lifts the transfer-learning model to IoU 0.593** at zero training cost
 (`scripts/10`). Surpassing the ≈0.6 ceiling requires cleaner supervision (e.g. a
 hand-verified label subset), not further architecture or recipe work.
 
+That cleaner supervision was then constructed by **cross-source consensus
+verification** (`scripts/13`): pixels on which OSM and Open Buildings agree are
+trusted (77% of the corpus; spot-verified visually against the imagery), while
+disagreement pixels are marked *ignore* and excluded from loss and metric alike.
+Two results follow. First, the benchmark itself was hiding model quality: scored
+on verified pixels only, the existing transfer-learning model achieves **pooled
+IoU 0.77** — most of its apparent error was disagreement with label noise, not
+with reality. Second, retraining with disputed pixels masked out of the loss
+yields a further genuine gain: **pooled verified IoU 0.80** (per-tile mean 0.70),
+and the new model now *correctly* rejects OSM's phantom buildings on open ground
+(its legacy score against raw OSM masks drops to 0.55 for exactly that reason —
+see `docs/figures/unet_predictions_consensus.png`). The verified metric excludes
+the hardest boundary pixels by construction, so these figures characterise
+region-level built-up mapping, consistent with the model's downstream use in
+Stage-2/4; per-footprint delineation in the dense core remains open pending
+instance-level labels.
+
 Applied to the **unseen 2024 epoch** (`scripts/08`), the model maps built-up extent
 *without any 2024 labels* (17.6 ha over the test patch), confirming label-free
 generalisation. However, naïve inter-epoch mask differencing is dominated by
@@ -177,7 +194,8 @@ encroachment estimator. Figures: `docs/figures/unet_predictions_resnet.png`,
 │   ├── 09_train_unet_v3.py          # recipe ablations (documented negative result)
 │   ├── 10_eval_tta.py               # flip TTA + threshold calibration (IoU 0.593)
 │   ├── 11_acquire_open_buildings.sh # Google Open Buildings v3 footprints for the AOI
-│   └── 12_label_noise_audit.sh      # quantifies the OSM label-noise floor
+│   ├── 12_label_noise_audit.sh      # quantifies the OSM label-noise floor
+│   └── 13_train_unet_consensus.py   # consensus-verified labels (verified IoU 0.80)
 └── accra_flood/               # working tree (data dirs are gitignored)
     ├── data/                  # DEM (regenerated)
     └── oldfadama/             # pilot AOI imagery, labels, metadata
