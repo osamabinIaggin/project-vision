@@ -183,14 +183,40 @@ corrupts flow routing). Least-cost depression breaching, D8 flow accumulation,
 stream extraction, and **height above nearest drainage (HAND)** are derived over
 the full Odaw catchment, from the Akwapim foothills to the Korle Lagoon outfall.
 
-**Point validation against the 3 June 2015 flood** (ReliefWeb FL-2015-000065-GHA):
-all four documented flood sites (Old Fadama, Kwame Nkrumah Circle, Alajo,
-Kaneshie) fall at HAND ≤ 6.6 m, while high-ground controls (Airport residential,
-Legon) sit at ≥ 18.4 m — clean separation with a 3× margin. No satellite-derived
-extent of the 2015 event exists in open archives (UNOSAT's only Ghana product
-covers the Oct-2023 lower-Volta event, verified to lie outside the basin; the
-event is absent from the Global Flood Database and Copernicus EMS), so validation
-is currently point-wise rather than areal.
+**Validation** proceeds on three independent lines, all from primary data (no
+agency ever published a flood extent for an Odaw event: UNOSAT's only Ghana
+product covers the Oct-2023 lower-Volta event, verified to lie outside the
+basin; the 2015 event is absent from the Global Flood Database; Copernicus EMS
+was never activated for Ghana).
+
+1. **Locality-level statistical test** (`scripts/19`). Every Odaw-basin
+   locality named in multi-year flood reporting (Old Fadama, Circle, Odawna,
+   Adabraka, Kaneshie, Nima, Alajo, Abeka Lapaz) versus eight elevated control
+   districts absent from flood reporting, geocoded independently via OSM
+   Nominatim: median HAND **1.9 m vs 23.0 m**, AUC 0.86, exact one-sided
+   Mann-Whitney **p = 0.0074**. The two flooded localities sampled high are
+   centroid artefacts (Nima and Lapaz geocode to ridge tops above their valley
+   frontage) — noise that biases *against* the hypothesis and is retained.
+
+2. **Areal open-water SAR mapping** (`scripts/17`). Sentinel-1 RTC scenes
+   (Planetary Computer, anonymous access) were processed for the 18 June 2018
+   (D+2) and 9 June 2020 (same-evening pass) floods against dry-season
+   reference stacks. The detector is demonstrably sound — 121 ha of water
+   change on 2020-06-09 at 99.5% HAND < 2 m (AUC 0.95), dominated by the
+   Panbros salt-pan cycle, a positive control — but inside the Odaw floodplain
+   it detects almost nothing: the surface is near-continuously roofed and
+   flooded streets raise VV backscatter (double-bounce) instead of darkening
+   it. Open-water SAR is physically blind to this basin's street flooding;
+   figures `docs/figures/sar_flood_20180620_vs_hand.png`, `..20200609..`.
+
+3. **SAR double-bounce statistics** (`scripts/18`). Testing the complementary
+   urban signature across all 29 June acquisitions 2015-2024: the one
+   same-evening flood acquisition ranks 5/29 on floodplain backscatter anomaly
+   (p = 0.17), and the anomaly does not correlate with pre-pass ERA5 rainfall
+   (Spearman ρ = -0.02). Reported as the null results they are: at 20 m VV
+   gamma0, the urban double-bounce channel carries no usable flood signal
+   here either. The terrain-based validation (line 1) is therefore the
+   operative evidence, and it is significant.
 
 The integrated exposure product (`scripts/16`) intersects the HAND hazard
 classes with the consensus-model built-up extent: **the entire 37.7 ha of
@@ -227,7 +253,10 @@ publish.
 │   ├── 13_train_unet_consensus.py   # consensus-verified labels (verified IoU 0.80)
 │   ├── 14_acquire_fabdem.sh         # FABDEM V1-2 tiles (bare-earth GLO-30)
 │   ├── 15_hydrology_odaw.py         # breach/D8/streams/HAND/TWI over the basin
-│   └── 16_flood_risk_surface.py     # HAND hazard x built-up exposure product
+│   ├── 16_flood_risk_surface.py     # HAND hazard x built-up exposure product
+│   ├── 17_sar_flood_validation.py   # Sentinel-1 flood mapping, 2018/2020 events
+│   ├── 18_sar_flood_statistics.py   # 29-scene double-bounce + rainfall tests
+│   └── 19_hand_locality_test.py     # Mann-Whitney HAND test, flood localities
 └── accra_flood/               # working tree (data dirs are gitignored)
     ├── data/                  # DEM (regenerated)
     └── oldfadama/             # pilot AOI imagery, labels, metadata
