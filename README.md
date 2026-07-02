@@ -229,6 +229,32 @@ in Stage 4. Figure: `docs/figures/flood_risk_oldfadama.png` (corridor HAND map,
 would require a drone-derived DSM, which the OpenAerialMap missions did not
 publish.
 
+### Decadal built-up and encroachment trend (Stage 4, temporal)
+
+The two-epoch drone change detection could not separate new construction from
+inter-flight prediction flicker. **Google Open Buildings 2.5D Temporal**
+(CC-BY 4.0, anonymous access; presence, count, and *height* at 4 m effective
+resolution, annually 2016-2023) replaces the two-epoch problem with eight
+consistent epochs (`scripts/20`). Over the AOI: built-up area grew **22.4 →
+33.3 ha (2016-2021, +49%)**, contracted to 27.4 ha in 2022, and rebounded to
+30.0 ha by 2023; built-up within the 15 m riparian buffer of the drains grew
+**tenfold** (0.03 → 0.31 ha). The 2021→2022 contraction is itself a
+validation of the source: the epochs are dated 30 June, and the
+police-backed Agbogbloshie clearance began **1 July 2021** — the series drops
+in exactly the epoch it should, and the 2023 rebound matches documented
+reoccupation. Mean structure height holds at 5-6 m (one-to-two storey),
+confirming minimal vertical refuge in the settlement. Cross-check: the 2020
+epoch reports 30.1 ha built-up vs 37.7 ha from the 5 cm consensus model —
+consistent given the 4 m footprint floor. Figure:
+`docs/figures/builtup_timeseries_oldfadama.png`.
+
+On the remaining terrain gap: no open online product resolves ground
+micro-topography for Accra (FABDEM/GLO-30 at 30 m is the open ceiling;
+TanDEM-X 12 m is proposal-gated; no national LiDAR exists). ICESat-2
+laser altimetry offers sparse cm-accurate ground tracks behind a free
+Earthdata registration and is the only open avenue toward sub-30 m vertical
+constraint short of a new drone flight.
+
 ## 6. Repository Structure
 
 ```
@@ -256,7 +282,8 @@ publish.
 │   ├── 16_flood_risk_surface.py     # HAND hazard x built-up exposure product
 │   ├── 17_sar_flood_validation.py   # Sentinel-1 flood mapping, 2018/2020 events
 │   ├── 18_sar_flood_statistics.py   # 29-scene double-bounce + rainfall tests
-│   └── 19_hand_locality_test.py     # Mann-Whitney HAND test, flood localities
+│   ├── 19_hand_locality_test.py     # Mann-Whitney HAND test, flood localities
+│   └── 20_builtup_timeseries.py     # 2016-2023 built-up/encroachment trend (2.5D)
 └── accra_flood/               # working tree (data dirs are gitignored)
     ├── data/                  # DEM (regenerated)
     └── oldfadama/             # pilot AOI imagery, labels, metadata
