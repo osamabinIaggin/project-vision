@@ -174,6 +174,35 @@ individual new structures; the deterministic overlay remains the higher-fidelity
 encroachment estimator. Figures: `docs/figures/unet_predictions_resnet.png`,
 `docs/figures/change_detection_oldfadama.png`.
 
+### Hydrological hazard and integrated exposure (Stages 3-4)
+
+Stage-3 terrain analysis (`scripts/14`-`15`) is computed from **FABDEM V1-2**
+(Copernicus GLO-30 with building/forest artefacts removed — necessary because
+over the dense urban fabric the raw GLO-30 surface embeds roof heights and
+corrupts flow routing). Least-cost depression breaching, D8 flow accumulation,
+stream extraction, and **height above nearest drainage (HAND)** are derived over
+the full Odaw catchment, from the Akwapim foothills to the Korle Lagoon outfall.
+
+**Point validation against the 3 June 2015 flood** (ReliefWeb FL-2015-000065-GHA):
+all four documented flood sites (Old Fadama, Kwame Nkrumah Circle, Alajo,
+Kaneshie) fall at HAND ≤ 6.6 m, while high-ground controls (Airport residential,
+Legon) sit at ≥ 18.4 m — clean separation with a 3× margin. No satellite-derived
+extent of the 2015 event exists in open archives (UNOSAT's only Ghana product
+covers the Oct-2023 lower-Volta event, verified to lie outside the basin; the
+event is absent from the Global Flood Database and Copernicus EMS), so validation
+is currently point-wise rather than areal.
+
+The integrated exposure product (`scripts/16`) intersects the HAND hazard
+classes with the consensus-model built-up extent: **the entire 37.7 ha of
+built-up Old Fadama lies in the severe class (HAND < 2 m)** — within-AOI hazard
+gradation is physically absent (mean HAND 0.03 m), not merely unresolved at the
+30 m DEM. The settlement-scale statement is therefore uniform severe fluvial
+exposure at the basin outlet, aggravated by the drainage encroachment quantified
+in Stage 4. Figure: `docs/figures/flood_risk_oldfadama.png` (corridor HAND map,
+2015 sites, and AOI). Pluvial ponding and within-settlement micro-topography
+would require a drone-derived DSM, which the OpenAerialMap missions did not
+publish.
+
 ## 6. Repository Structure
 
 ```
@@ -195,7 +224,10 @@ encroachment estimator. Figures: `docs/figures/unet_predictions_resnet.png`,
 │   ├── 10_eval_tta.py               # flip TTA + threshold calibration (IoU 0.593)
 │   ├── 11_acquire_open_buildings.sh # Google Open Buildings v3 footprints for the AOI
 │   ├── 12_label_noise_audit.sh      # quantifies the OSM label-noise floor
-│   └── 13_train_unet_consensus.py   # consensus-verified labels (verified IoU 0.80)
+│   ├── 13_train_unet_consensus.py   # consensus-verified labels (verified IoU 0.80)
+│   ├── 14_acquire_fabdem.sh         # FABDEM V1-2 tiles (bare-earth GLO-30)
+│   ├── 15_hydrology_odaw.py         # breach/D8/streams/HAND/TWI over the basin
+│   └── 16_flood_risk_surface.py     # HAND hazard x built-up exposure product
 └── accra_flood/               # working tree (data dirs are gitignored)
     ├── data/                  # DEM (regenerated)
     └── oldfadama/             # pilot AOI imagery, labels, metadata
