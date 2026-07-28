@@ -381,6 +381,27 @@ other settlements and eight epochs recover most of the loss, which places cross-
 generalisation firmly in the category of problems this project can solve with data it can
 obtain, and distinguishes it from the per-footprint delineation ceiling, which it cannot.
 
+The five fold models exist only to produce the table above; none of them is deployable,
+each having been deliberately deprived of a site. The **production checkpoint**
+(`scripts/28 --production`, 16 epochs over all 2,656 verified tiles,
+`resunet_production_5site.pt`) is the one to use downstream. Its validation split scores
+0.880 pooled and 0.817 per-tile, distributed evenly across the five sites:
+
+| | Akweteyman | Alajo | Alogboshie | Nima | Old Fadama |
+|---|---|---|---|---|---|
+| pooled verified IoU | 0.898 | 0.883 | 0.868 | 0.912 | 0.862 |
+
+Alogboshie is the informative entry. Unseen it scored 0.298; held out of training but with
+four sibling sites available, 0.616; represented in training, 0.868 — level with the rest.
+Its difficulty was never intractable, only unrepresented, which is the clearest statement
+of the coverage argument the leave-one-site-out table makes in aggregate.
+
+That validation split is nonetheless drawn from sites the model was fitted on, so it
+measures fit rather than generalisation and should not be quoted as the latter. The honest
+expectation for a settlement outside the corpus remains the leave-one-site-out figure:
+roughly 0.83–0.88 for a typical community, and about 0.62 for one as morphologically
+distant as Alogboshie.
+
 ### Conveyance capacity of the surveyed drainage network (Stage 5)
 
 Stages 2–4 establish where water concentrates and where structures encroach on

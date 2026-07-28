@@ -128,8 +128,14 @@ def evaluate(model, items, device, size, batch=8, tta=True):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--holdout", required=True,
+    ap.add_argument("--holdout",
                     help="site held out entirely: oldfadama|alogboshie|akweteman|alajo|nima")
+    ap.add_argument("--production", action="store_true",
+                    help="train the deployable checkpoint on ALL five sites. This "
+                         "produces no unbiased estimate of its own generalisation — "
+                         "that is what the leave-one-site-out folds are for — so the "
+                         "figure to quote for an unseen settlement remains the LOSO "
+                         "result, not this run's validation score.")
     ap.add_argument("--epochs", type=int, default=12)
     ap.add_argument("--batch", type=int, default=8)
     ap.add_argument("--size", type=int, default=256)
@@ -143,12 +149,15 @@ def main():
 
     items = catalogue()
     sites = sorted({s for s, _, _ in items})
-    if a.holdout not in sites:
+    if not a.production and not a.holdout:
+        raise SystemExit("give --holdout <site> or --production")
+    if a.holdout and a.holdout not in sites:
         raise SystemExit(f"unknown site {a.holdout}; have {sites}")
     train_items = [it for it in items if it[0] != a.holdout]
     held_items = [it for it in items if it[0] == a.holdout]
     counts = collections.Counter(s for s, _, _ in items)
-    print(f"device={device}  corpus={len(items)} tiles over {len(sites)} sites")
+    mode = "PRODUCTION (all sites)" if a.production else f"holdout {a.holdout}"
+    print(f"device={device}  corpus={len(items)} tiles over {len(sites)} sites  [{mode}]")
     for s in sites:
         print(f"    {s:12s} {counts[s]:5d}" + ("   <- HELD OUT" if s == a.holdout else ""))
 
@@ -164,17 +173,21 @@ def main():
     model.load_state_dict(torch.load(CKPT_IN, map_location=device))
     print(f"  initialised from {os.path.basename(CKPT_IN)}")
 
-    base_pooled, base_tile, base_pred, base_tgt = evaluate(
-        model, held_items, device, a.size)
-    print(f"\n  zero-shot on {a.holdout}: pooled {base_pooled:.3f}  "
-          f"per-tile {base_tile:.3f}  pred {base_pred:.1%} vs actual {base_tgt:.1%}")
+    if held_items:
+        base_pooled, base_tile, base_pred, base_tgt = evaluate(
+            model, held_items, device, a.size)
+        print(f"\n  zero-shot on {a.holdout}: pooled {base_pooled:.3f}  "
+              f"per-tile {base_tile:.3f}  pred {base_pred:.1%} vs actual {base_tgt:.1%}")
+    else:
+        base_pooled = base_tile = base_pred = base_tgt = float("nan")
 
     dl = DataLoader(Tiles(fit_items, a.size, augment=True), batch_size=a.batch,
                     shuffle=True, num_workers=0)
     opt = torch.optim.Adam(model.parameters(), lr=a.lr)
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=a.epochs)
     best, best_ep = -1.0, 0
-    ckpt = os.path.join(OUTDIR, f"resunet_joint_holdout_{a.holdout}.pt")
+    ckpt = os.path.join(OUTDIR, "resunet_production_5site.pt" if a.production
+                        else f"resunet_joint_holdout_{a.holdout}.pt")
     for ep in range(1, a.epochs + 1):
         model.train(); tot = 0.0
         for img, tgt, valid in dl:
@@ -192,8 +205,29 @@ def main():
             torch.save(model.state_dict(), ckpt)
 
     model.load_state_dict(torch.load(ckpt, map_location=device))
-    ft_pooled, ft_tile, ft_pred, ft_tgt = evaluate(model, held_items, device, a.size)
     hi_pooled, hi_tile, _, _ = evaluate(model, heldin_items, device, a.size)
+
+    if a.production:
+        print(f"\n--- production checkpoint, all {len(sites)} sites ---")
+        print(f"  selected epoch {best_ep} on validation IoU {best:.3f}")
+        print(f"  validation (held-in, {len(heldin_items)} tiles): "
+              f"pooled {hi_pooled:.3f}  per-tile {hi_tile:.3f}")
+        print(f"\n  {'site':12s} {'val tiles':>10s} {'pooled':>8s} {'per-tile':>9s}")
+        by = collections.defaultdict(list)
+        for it in heldin_items:
+            by[it[0]].append(it)
+        for s in sorted(by):
+            p, t, _, _ = evaluate(model, by[s], device, a.size)
+            print(f"  {s:12s} {len(by[s]):>10d} {p:>8.3f} {t:>9.3f}")
+        print("\n  This validation split is drawn from sites the model trained on, so it")
+        print("  measures fit, NOT generalisation. For an unseen settlement the honest")
+        print("  expectation is the leave-one-site-out result: ~0.83-0.88 for a typical")
+        print("  community, ~0.62 for one as hard as Alogboshie (accra_flood/output/")
+        print("  joint_finetune.csv).")
+        print(f"\nwrote {ckpt}")
+        return
+
+    ft_pooled, ft_tile, ft_pred, ft_tgt = evaluate(model, held_items, device, a.size)
 
     print(f"\n--- leave-one-site-out: {a.holdout} ---")
     print(f"  selected epoch {best_ep} on held-in IoU {best:.3f}")
