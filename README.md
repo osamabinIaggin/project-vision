@@ -28,6 +28,8 @@ which prior work has relied.
   ensembles over terrain morphometrics (slope, flow accumulation, TWI)
 - **Topology-aware geospatial overlay** — reconciling segmented structures against
   the hydrographic network to rank hazard loci
+- **Open-channel hydraulics** — Manning conveyance capacity of field-surveyed
+  drain cross-sections, and its collapse under progressive siltation
 - **Reproducible by construction** — open data, scripted acquisition, and a
   version-controlled methodology rather than committed binary payloads
 
@@ -80,9 +82,13 @@ conceived as a monolithic end-to-end estimator:
 | 2 | Pixel-wise semantic segmentation of the built environment, drainage network, and encroachment | Supervised deep learning (encoder–decoder CNN) |
 | 3 | Terrain-derived flood-susceptibility inference from morphometric covariates (elevation, slope, flow accumulation, Topographic Wetness Index) | Tabular ensemble learning |
 | 4 | Topology-aware overlay reconciling extracted structures against the drainage ontology to yield prioritised hazard loci | Deterministic geospatial computation |
+| 5 | Hydraulic conveyance analysis of the field-surveyed drainage network, and its degradation under siltation | Open-channel hydraulics (Manning) |
 
-The present repository operationalises Stages 1, 3 (conceptual), and 4, and
-furnishes the labelled corpus required to instantiate Stage 2.
+All five stages are operationalised in this repository. Stage 1 is satisfied by
+the published OpenAerialMap orthomosaics rather than by re-running
+photogrammetry; Stage 3 is realised as physically-based terrain hydrology
+(HAND) in place of the originally-envisaged tabular ensemble, the AOI having
+proved to admit no within-basin hazard gradient for such a model to learn.
 
 ## 4. Data Provenance
 
@@ -91,6 +97,10 @@ furnishes the labelled corpus required to instantiate Stage 2.
 | Orthomosaics (2020, 2024) | OpenAerialMap | CC-BY 4.0 | ~5 cm GSD, RGB, EPSG:32630 |
 | Vector labels (buildings, drainage) | OpenStreetMap (via Overpass) | ODbL | 25,286 building footprints; Odaw, drains, canal |
 | Digital elevation model | Copernicus GLO-30 | Copernicus open | 30 m, 0–739 m relief over the metropolitan extent |
+| Bare-earth terrain | FABDEM V1-2 | CC-BY-NC-SA | 30 m, building/forest artefacts removed |
+| Drainage cross-sections | Open Cities Accra / GARID field survey, via OSM | ODbL | 2,107 drain/ditch ways; 760 with surveyed width and depth |
+| Built-up time series | Google Open Buildings 2.5D Temporal | CC-BY 4.0 | presence, count, height; annual 2016–2023 |
+| Rainfall | ERA5 hourly reanalysis (Open-Meteo) | CC-BY 4.0 | ~31 km, 1980–2024 |
 
 Raster payloads are excluded from version control (see `.gitignore`) and are
 regenerated deterministically by the acquisition scripts in `scripts/`.
@@ -255,6 +265,93 @@ laser altimetry offers sparse cm-accurate ground tracks behind a free
 Earthdata registration and is the only open avenue toward sub-30 m vertical
 constraint short of a new drone flight.
 
+### Conveyance capacity of the surveyed drainage network (Stage 5)
+
+Stages 2–4 establish where water concentrates and where structures encroach on
+the drains. Neither asks whether the drains that remain can carry what their
+catchments deliver. The Open Cities Accra / GARID field campaigns (2018–2020)
+surveyed the middle-Odaw drains segment by segment and committed engineering
+attributes to OpenStreetMap — width, depth, cross-section profile, material,
+invert smoothness, culvert status — which is precisely the geometry Manning's
+equation requires. `scripts/21` retrieves 2,107 drain and ditch ways over
+central Accra, 760 of them carrying both width and depth.
+
+**No design storm is used, because none can be defended.** `scripts/22` tests
+whether an open rainfall product can supply one, and reports a clean negative:
+fitted to 45 years of ERA5 hourly reanalysis, the Gumbel relation is internally
+well-behaved and reproduces Accra's annual total (~900 mm), yet on every
+documented flood day the reanalysis returns a depth *below every annual maximum
+in the record* — 3 June 2015, which killed some 150 people, appears as a
+5.1 mm/h, 10.8 mm/24h day. Six sample points spanning the metropolis return
+byte-identical series, so this is grid resolution, not storm displacement: one
+~31 km cell covers the city, and coastal Accra's convective rainfall is beneath
+it. The model is therefore inverted. For each segment the rational method is
+solved not for discharge but for the **critical intensity** at which the drain
+reaches capacity, `i_crit = Q_cap · 3.6·10⁶ / (C · A)` — a property of the drain
+and its catchment alone, requiring no rainfall input and no return period. The
+ERA5 relation is retained only as an acknowledged *floor* (1-hour, T = 10 yr:
+20.8 mm/h) against which those critical intensities are read.
+
+Contributing area is accumulated on the drain network itself rather than routed
+over the DEM, for a reason this project has already established: no open product
+resolves Accra's street-level micro-topography, so D8 routing over a 30 m
+surface cannot determine which side of a street drains to which gutter. Each
+10 m cell is instead allocated to its nearest drain and the resulting local
+catchments are accumulated downstream through the network graph, reconstructed
+from OSM endpoints snapped at 3 m and oriented by a 300 m-smoothed elevation
+field. Longitudinal grade is taken across a 300 m chord and clamped to the range
+urban drains are actually laid to (0.1–2%); the DEM is used only to place a
+segment within that range, never to assert a grade outside it. Because grade
+enters as √S, the *ranking* is invariant to it and only absolute counts shift.
+
+Two data-quality findings preceded any hydraulic result, and both materially
+changed it. First, 108 surveyed segments (4.3 km) carry widths of 4–20 cm —
+median 6 cm — against depths of 0.2–0.7 m, aspect ratios reaching 13:1. These
+are not street drains but unit or entry errors in the field campaign, and left
+in they dominated the ranking completely, supplying 91 of the 107 apparently
+critical segments. They are flagged in the output and held out of the headline
+statistics rather than silently discarded. Second, the surveyed network is
+topologically fragmented — 484 connected components before endpoint snapping,
+293 of them isolated single ways — so accumulated catchments remain local
+(median 0.64 ha, maximum 50 ha) and no trunk conveyance is represented.
+
+On the 652 segments (45.2 km) with credible geometry the result is
+counter-intuitive and, for this project's thesis, the point:
+
+| Invert condition | Segments failing | Length | Share of network |
+|------------------|------------------|--------|------------------|
+| Clean section | 16 | 1.0 km | 2.3% |
+| 25% silted | 27 | 1.9 km | 4.1% |
+| 50% silted | 46 | 3.1 km | 6.9% |
+| 75% silted | 146 | 11.6 km | **25.8%** |
+
+**The drains are not undersized.** At full section the median segment conveys
+0.61 m³/s against a median catchment of 0.64 ha and tolerates 309 mm/h — an
+intensity no Accra storm approaches — and only 2.3% of the network fails even
+the deliberately conservative ERA5 floor. Capacity is lost to the *state* of the
+invert, not its geometry: siltation to three-quarters depth multiplies the
+failing length elevenfold, and the median segment fails once 85% silted, with
+the most fragile fifth going at 36%. The hazard is therefore a maintenance
+variable rather than a construction one, which is exactly the quantity that
+centimetre-resolution overhead imagery can observe and a design study cannot.
+It also locates Stage 5 squarely on the project's central hypothesis: Accra's
+flooding is anthropogenic, and the anthropogenic term here is refuse in the
+channel, not an engineering deficit. Figure:
+`docs/figures/drain_capacity_accra.png`; per-segment results, ranked and with
+the plausibility flag retained, in `accra_flood/output/drain_capacity.csv` and a
+QGIS-ready `drain_capacity.gpkg`.
+
+The principal caveats are stated rather than absorbed. The siltation sweep is a
+scenario, not an observation — the survey's `smoothness` tag is the only
+recorded proxy for invert condition and it does not separate the fragile
+segments (median 398 mm/h against 305 for the remainder), so which drains are
+*actually* silted remains unmeasured and is the natural target for Stage-2
+imagery. Fragmentation means the trunk drains that would carry the accumulated
+flow are absent from the surveyed set, so basin-scale backwater — a documented
+contributor at the Odaw outfall — is outside this model. And every intensity
+here is anchored to a floor known to understate the truth, so the failure shares
+are lower bounds.
+
 ## 6. Repository Structure
 
 ```
@@ -283,9 +380,13 @@ constraint short of a new drone flight.
 │   ├── 17_sar_flood_validation.py   # Sentinel-1 flood mapping, 2018/2020 events
 │   ├── 18_sar_flood_statistics.py   # 29-scene double-bounce + rainfall tests
 │   ├── 19_hand_locality_test.py     # Mann-Whitney HAND test, flood localities
-│   └── 20_builtup_timeseries.py     # 2016-2023 built-up/encroachment trend (2.5D)
+│   ├── 20_builtup_timeseries.py     # 2016-2023 built-up/encroachment trend (2.5D)
+│   ├── 21_acquire_drain_survey.sh   # Open Cities/GARID surveyed drain network
+│   ├── 22_design_storm_idf.py       # ERA5 IDF (documented negative result)
+│   └── 23_drain_capacity.py         # Manning capacity, siltation response (Stage 5)
 └── accra_flood/               # working tree (data dirs are gitignored)
     ├── data/                  # DEM (regenerated)
+    ├── drains/                # surveyed drainage network (regenerated)
     └── oldfadama/             # pilot AOI imagery, labels, metadata
 ```
 
@@ -310,6 +411,25 @@ modest corpus of crisp, manually corrected building labels to lift the ceiling;
 post-classification methods) in place of naïve mask differencing; and (iii)
 extending the corpus to upstream communities (Alogboshie, Alajo, Akweteyman) to
 guard against a settlement-specific representation.
+
+The Stage-5 hydraulics sharpen that third priority into a specific and testable
+objective. Having shown that the surveyed cross-sections are adequate when clean
+and that failure is governed instead by siltation, the decisive unmeasured
+quantity is *which* drains are obstructed — a state variable, varying on the
+timescale of a wet season, that no cross-section survey can capture and that the
+OSM `smoothness` tag does not resolve. The two halves of this repository meet
+there: the Open Cities drone imagery covering Alogboshie, Akweteyman, Alajo and
+Nima is the same 2–5 cm material Stage 2 already trains on, and it overlaps the
+surveyed network exactly. Segmenting refuse and silt within the drain corridor,
+and driving the Stage-5 blockage parameter from that observation rather than
+from a scenario sweep, would convert the present conditional result into a
+measured one. Three further gaps are noted without being minimised: the trunk
+drains that carry accumulated flow are absent from the surveyed set, so
+basin-scale backwater is unmodelled; no open rainfall product resolves the
+convective intensities that actually cause the flooding, which bounds every
+absolute figure reported here from below; and the longitudinal grades are
+constrained to an engineering range rather than measured, though the ranking is
+invariant to that choice.
 
 ## 9. Licence and Citation
 
