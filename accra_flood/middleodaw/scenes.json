@@ -1,0 +1,30 @@
+{
+  "source": "OpenAerialMap, Open Cities Africa (CC-BY 4.0)",
+  "note": "read remotely via /vsicurl; cloud-optimised, 512x512 blocks + overviews",
+  "scenes": {
+    "alogboshie": {
+      "title": "Open Cities Africa - Alogboshie, Accra",
+      "acquired": "2018-08-05", "gsd_m": 0.0201, "size_mb": 1184,
+      "bbox": [-0.2435, 5.6197, -0.2270, 5.6479],
+      "url": "https://oin-hotosm-temp.s3.amazonaws.com/5b694a0f4b87366cc0f0fa70/0/5b694a0f4b8736ebfff0fa71.tif"
+    },
+    "akweteman": {
+      "title": "Open Cities Africa - Akweteman, Accra",
+      "acquired": "2018-10-06", "gsd_m": 0.0322, "size_mb": 366,
+      "bbox": [-0.2500, 5.6074, -0.2327, 5.6198],
+      "url": "https://oin-hotosm-temp.s3.amazonaws.com/5bb9323e9ed15b0006d24f33/0/5bb9323e9ed15b0006d24f34.tif"
+    },
+    "alajo": {
+      "title": "Open Cities Africa - Alajo, Accra",
+      "acquired": "2018-11-12", "gsd_m": 0.0360, "size_mb": 624,
+      "bbox": [-0.2349, 5.5826, -0.1999, 5.6111],
+      "url": "https://oin-hotosm-temp.s3.amazonaws.com/5be9bb18080ac000051474fd/0/5be9bb18080ac000051474fe.tif"
+    },
+    "nima": {
+      "title": "Open Cities Africa - Nima, Accra",
+      "acquired": "2019-07-07", "gsd_m": 0.0520, "size_mb": 295,
+      "bbox": [-0.2100, 5.5721, -0.1863, 5.5950],
+      "url": "https://oin-hotosm-temp.s3.amazonaws.com/5d2d0ab4f416f40006cffcc1/0/5d2d0ab4f416f40006cffcc2.tif"
+    }
+  }
+}

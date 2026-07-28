@@ -265,6 +265,65 @@ laser altimetry offers sparse cm-accurate ground tracks behind a free
 Earthdata registration and is the only open avenue toward sub-30 m vertical
 constraint short of a new drone flight.
 
+### Cross-site transfer: the Stage-2 representation is settlement-specific
+
+Every Stage-2 number above was obtained at Old Fadama, and §8 has recorded from the
+outset the risk that a model fit there learns a lagoon-mouth informal settlement rather
+than Accra's dense built fabric in general. That risk is now measured rather than
+asserted. The Open Cities Africa drone missions cover four middle-Odaw communities
+upstream — Alogboshie, Akweteyman, Alajo and Nima — which are also the communities whose
+drains Stage 5 analyses, so the same imagery serves both purposes (`scripts/24`–`26`).
+The scenes are cloud-optimised, so the windows are read remotely rather than downloaded;
+each is resampled to the 5 cm training GSD, since a transfer test conducted at the wrong
+scale would measure the scale mismatch instead. Supervision is rebuilt identically:
+the same two sources, the same consensus rule, the same ignore band.
+
+The unmodified consensus checkpoint was then applied zero-shot to 1,575 tiles
+(`scripts/27`):
+
+| Site | tiles | pooled verified IoU | per-tile | label floor | predicted built-up | actual (OSM) |
+|---|---|---|---|---|---|---|
+| Old Fadama (control, own val split) | 217 | **0.798** | 0.695 | 0.611 | 53.2% | 49.8% |
+| Akweteyman | 400 | 0.641 | 0.603 | 0.519 | 38.2% | 43.6% |
+| Alajo | 398 | 0.603 | 0.558 | 0.488 | 38.1% | 41.6% |
+| Nima | 400 | 0.507 | 0.494 | 0.713 | 43.1% | 65.5% |
+| Alogboshie | 377 | 0.297 | 0.359 | 0.543 | 11.0% | 36.8% |
+| **All four, pooled** | **1,575** | **0.523** | 0.505 | 0.578 | — | — |
+
+**The representation degrades substantially but does not collapse.** Pooled verified IoU
+falls from 0.798 to 0.523 — a loss of 0.28 — while the label-noise floor moves only from
+0.611 to 0.578. The degradation is therefore attributable to the model rather than to
+worse supervision upstream, but it is partial: three of the four communities retain
+0.51–0.64, which is materially above chance and, for Akweteyman and Alajo, close to the
+label floor itself. Predicted built-up fraction tracks the actual fraction at those two
+sites (38.2% against 43.6%, 38.1% against 41.6%), so the model remains calibrated there
+and simply delineates less precisely.
+
+Alogboshie is a genuine outlier and is reported as such rather than averaged away: 0.297
+pooled, with a predicted built-up fraction of 11.0% against 36.8% present — it
+under-segments by more than threefold, where the other three do not. One candidate
+explanation is resolution provenance rather than morphology: Alogboshie is the finest
+source in the set at 2.01 cm and is downsampled 2.5× to reach the 5 cm training GSD,
+whereas Akweteyman, Alajo and Nima sit at 3.2, 3.6 and 5.2 cm and are barely resampled.
+Downsampling that aggressively alters exactly the high-frequency texture a CNN keys on.
+This is a hypothesis consistent with the ordering, not a demonstrated cause; it is
+testable by re-tiling Alogboshie at its native scale and has not been done.
+
+That the comparison means anything at all rests on a control, and the control is the
+methodological point. A low score at a new site is uninterpretable in isolation — as
+consistent with a preprocessing defect as with a domain shift. `scripts/27 --control`
+therefore scores Old Fadama's own validation split through the identical code path, and
+recovers 0.798 / 0.695 / 0.611 against the 0.80 / 0.70 / 0.611 published from
+`scripts/13`. The pipeline is sound; the gap is real. Figure:
+`docs/figures/transfer_middleodaw.png` (imagery, verified label, prediction, three tiles
+per community).
+
+The practical consequence is that the existing checkpoint should not be deployed outside
+Old Fadama without fine-tuning or joint training, and this bears directly on the siltation
+work Stage 5 designates as the next milestone, since that work is sited in these very
+communities. What was a caveat in §8 is now a quantified prerequisite — and the corpus
+needed to remove it, 1,575 consensus-verified tiles across four settlements, is now built.
+
 ### Conveyance capacity of the surveyed drainage network (Stage 5)
 
 Stages 2–4 establish where water concentrates and where structures encroach on
@@ -383,10 +442,15 @@ are lower bounds.
 │   ├── 20_builtup_timeseries.py     # 2016-2023 built-up/encroachment trend (2.5D)
 │   ├── 21_acquire_drain_survey.sh   # Open Cities/GARID surveyed drain network
 │   ├── 22_design_storm_idf.py       # ERA5 IDF (documented negative result)
-│   └── 23_drain_capacity.py         # Manning capacity, siltation response (Stage 5)
+│   ├── 23_drain_capacity.py         # Manning capacity, siltation response (Stage 5)
+│   ├── 24_acquire_middle_odaw_imagery.sh  # Open Cities scene catalogue (remote-read)
+│   ├── 25_acquire_middle_odaw_labels.sh   # OSM + Open Buildings for the new AOI
+│   ├── 26_build_middle_odaw_tiles.py      # consensus tile corpus at 5 cm
+│   └── 27_transfer_eval.py                # zero-shot transfer test (+ --control)
 └── accra_flood/               # working tree (data dirs are gitignored)
     ├── data/                  # DEM (regenerated)
     ├── drains/                # surveyed drainage network (regenerated)
+    ├── middleodaw/            # four upstream communities; scenes.json is versioned
     └── oldfadama/             # pilot AOI imagery, labels, metadata
 ```
 
@@ -411,6 +475,17 @@ modest corpus of crisp, manually corrected building labels to lift the ceiling;
 post-classification methods) in place of naïve mask differencing; and (iii)
 extending the corpus to upstream communities (Alogboshie, Alajo, Akweteyman) to
 guard against a settlement-specific representation.
+
+Item (iii) has since been carried out, and it converted a suspicion into a
+measurement: the Old Fadama checkpoint loses 0.28 pooled verified IoU on four
+upstream communities against an essentially unchanged label floor, with one site
+(Alogboshie) degrading far more than the rest. The 1,575-tile consensus corpus
+built for that test is also the corpus required to repair it, so the outstanding
+work is now joint training or fine-tuning across the five sites rather than
+further diagnosis. Two smaller threads follow from it: Alogboshie's outlier
+behaviour should be tested against the resampling hypothesis by re-tiling at
+native scale, and the corpus windows can be widened from 512 m to the Old Fadama
+1024 m via `MIDODAW_WINDOW` once a training run needs the volume.
 
 The Stage-5 hydraulics sharpen that third priority into a specific and testable
 objective. Having shown that the surveyed cross-sections are adequate when clean
