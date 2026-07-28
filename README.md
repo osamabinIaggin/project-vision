@@ -338,6 +338,49 @@ work Stage 5 designates as the next milestone, since that work is sited in these
 communities. What was a caveat in §8 is now a quantified prerequisite — and the corpus
 needed to remove it, 1,575 consensus-verified tiles across four settlements, is now built.
 
+### The transfer gap is a coverage limitation, not a ceiling (Stage 2, joint)
+
+Measuring the gap leaves open whether it can be closed. Stage 2 had already met one hard
+ceiling at Old Fadama — label granularity, immovable by architecture or recipe — so the
+possibility that cross-site degradation was a second such ceiling had to be excluded
+rather than assumed. `scripts/28` settles it by leave-one-site-out: each of the five
+sites is withheld *entirely*, the consensus checkpoint is fine-tuned for eight epochs on
+the other four, and the withheld site is scored under the identical verified-pixel
+metric. Holding out whole sites rather than random tiles is what makes this a test of
+transfer rather than of interpolation — tiles drawn from a single 512 m window are far
+too spatially correlated for a random split to say anything about a new settlement.
+
+| Held-out site | tiles | before | after fine-tuning | change | held-in sites |
+|---|---|---|---|---|---|
+| Alogboshie | 377 | 0.298 | **0.616** | +0.318 | 0.885 |
+| Nima | 400 | 0.507 | **0.863** | +0.355 | 0.866 |
+| Alajo | 398 | 0.603 | **0.833** | +0.231 | 0.888 |
+| Akweteyman | 400 | 0.641 | **0.883** | +0.242 | 0.881 |
+| Old Fadama | 1,081 | 0.904 † | 0.681 | — † | 0.912 |
+
+Every genuinely unseen site improves, by between 0.23 and 0.36 pooled verified IoU, for a
+mean of **+0.287** — and it does so without the model ever seeing a tile from the site it
+is scored on. Alogboshie, the outlier that resisted the preprocessing explanation, more
+than doubles from 0.298 to 0.616. It remains the hardest of the five, so the domain
+difference established above is real, but it is plainly learnable rather than intractable.
+Recalibration accompanies the accuracy: Alogboshie's predicted built-up fraction moves
+from 11.0% against 26.2% actual to 30.4%, i.e. from threefold under-segmentation to
+approximate agreement. Held-in performance sits at 0.866–0.912 throughout, so none of this
+is bought by forgetting the sites already learned.
+
+† The Old Fadama row is not comparable and is marked accordingly. Its "before" figure of
+0.904 is not a transfer score at all: the starting checkpoint was trained on 80% of those
+very tiles, so scoring the whole site recovers a training-set number, and the apparent
+−0.222 is an artefact of that contamination rather than a regression. The interpretable
+quantity in that fold is the 0.681 — what four middle-Odaw communities alone generalise to
+Old Fadama, having never seen it. That figure is reported for what it is.
+
+The conclusion is that the degradation documented above reflects the *coverage* of the
+training corpus rather than a limit of the representation. Roughly two thousand tiles from
+other settlements and eight epochs recover most of the loss, which places cross-site
+generalisation firmly in the category of problems this project can solve with data it can
+obtain, and distinguishes it from the per-footprint delineation ceiling, which it cannot.
+
 ### Conveyance capacity of the surveyed drainage network (Stage 5)
 
 Stages 2–4 establish where water concentrates and where structures encroach on
@@ -460,7 +503,8 @@ are lower bounds.
 │   ├── 24_acquire_middle_odaw_imagery.sh  # Open Cities scene catalogue (remote-read)
 │   ├── 25_acquire_middle_odaw_labels.sh   # OSM + Open Buildings for the new AOI
 │   ├── 26_build_middle_odaw_tiles.py      # consensus tile corpus at 5 cm
-│   └── 27_transfer_eval.py                # zero-shot transfer test (+ --control)
+│   ├── 27_transfer_eval.py                # zero-shot transfer test (+ --control)
+│   └── 28_joint_finetune.py               # leave-one-site-out fine-tuning
 └── accra_flood/               # working tree (data dirs are gitignored)
     ├── data/                  # DEM (regenerated)
     ├── drains/                # surveyed drainage network (regenerated)
@@ -490,16 +534,20 @@ post-classification methods) in place of naïve mask differencing; and (iii)
 extending the corpus to upstream communities (Alogboshie, Alajo, Akweteyman) to
 guard against a settlement-specific representation.
 
-Item (iii) has since been carried out, and it converted a suspicion into a
-measurement: the Old Fadama checkpoint loses 0.28 pooled verified IoU on four
-upstream communities against an essentially unchanged label floor, with one site
-(Alogboshie) degrading far more than the rest. The 1,575-tile consensus corpus
-built for that test is also the corpus required to repair it, so the outstanding
-work is now joint training or fine-tuning across the five sites rather than
-further diagnosis. Two smaller threads follow from it: Alogboshie's outlier
-behaviour should be tested against the resampling hypothesis by re-tiling at
-native scale, and the corpus windows can be widened from 512 m to the Old Fadama
-1024 m via `MIDODAW_WINDOW` once a training run needs the volume.
+Item (iii) has since been carried out and then resolved. It first converted a
+suspicion into a measurement — the Old Fadama checkpoint loses 0.28 pooled
+verified IoU on four upstream communities against an essentially unchanged label
+floor — and leave-one-site-out fine-tuning then showed that loss to be a
+coverage limitation rather than a ceiling, recovering a mean of +0.287 on sites
+the model has never seen. What remains is engineering rather than diagnosis:
+train a single production checkpoint on all five sites (the per-fold models
+exist only to measure generalisation), and widen the middle-Odaw windows from
+512 m to Old Fadama's 1024 m via `MIDODAW_WINDOW` for the extra volume. Two
+limits are worth restating because they did not move. Alogboshie remains the
+hardest site after fine-tuning, so settlement morphology still costs accuracy
+even when it is represented in training. And per-footprint delineation in dense
+fabric remains bounded by label granularity, which no amount of additional
+sites addresses; that requires instance-level annotation.
 
 The Stage-5 hydraulics sharpen that third priority into a specific and testable
 objective. Having shown that the surveyed cross-sections are adequate when clean
