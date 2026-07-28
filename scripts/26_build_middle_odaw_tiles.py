@@ -94,7 +94,21 @@ def read_gray(path):
     return np.asarray(Image.open(path))
 
 
-def build(name, url, lon, lat, writer):
+def resampler(gsd_native, gsd_target=GSD):
+    """Choose a resampling kernel that does not alias.
+
+    Bilinear reads a 2x2 neighbourhood, so it under-filters whenever the source
+    is being reduced by much more than a factor of two: the discarded detail
+    folds back as aliasing rather than being averaged away. `average` integrates
+    over the full source footprint and is the correct kernel for a genuine
+    downsample. This matters here because the scenes span 2.0-5.2 cm against a
+    5 cm target, i.e. reduction factors from 2.49x down to 1.04x, and applying
+    one kernel across that range treats the sharpest scene worst.
+    """
+    return "average" if gsd_target / max(gsd_native, 1e-9) > 1.6 else "bilinear"
+
+
+def build(name, url, lon, lat, writer, gsd_native=GSD):
     src = "/vsicurl/" + url           # windowed remote read; see scripts/24
     work = os.path.join(TILES, f"_work_{name}")
     os.makedirs(work, exist_ok=True)
@@ -106,14 +120,16 @@ def build(name, url, lon, lat, writer):
     if os.path.exists(crop):
         print(f"  {name}: reusing cached {WINDOW:.0f} m crop")
     else:
-        print(f"  {name}: fetching {WINDOW:.0f} m window remotely at {GSD*100:.0f} cm ...",
-              flush=True)
+        rs = resampler(gsd_native)
+        print(f"  {name}: fetching {WINDOW:.0f} m window remotely at {GSD*100:.0f} cm "
+              f"({gsd_native*100:.2f} cm native, {GSD/gsd_native:.2f}x reduction, "
+              f"-r {rs}) ...", flush=True)
         # -of GTiff is REQUIRED, not decorative: gdalwarp selects its driver from
         # the output extension, and the ".part" staging suffix is unknown to it,
         # so it aborts at driver selection before touching the network.
         gdal("gdalwarp", "-overwrite", "-of", "GTiff",
              "-t_srs", "EPSG:32630", "-tr", GSD, GSD,
-             "-te", *te, "-r", "bilinear", "-ot", "Byte",
+             "-te", *te, "-r", rs, "-ot", "Byte",
              "-co", "TILED=YES", "-co", "COMPRESS=DEFLATE", src, crop + ".part")
         if os.path.exists(crop + ".part"):
             os.replace(crop + ".part", crop)
@@ -196,7 +212,8 @@ def main():
                     "osm_fraction", "gob_fraction", "ignore_fraction"])
         for name, s in scenes.items():
             bb = s["bbox"]                       # window centred on the scene
-            total += build(name, s["url"], (bb[0] + bb[2]) / 2, (bb[1] + bb[3]) / 2, w)
+            total += build(name, s["url"], (bb[0] + bb[2]) / 2, (bb[1] + bb[3]) / 2, w,
+                           gsd_native=float(s.get("gsd_m", GSD)))
     print(f"\ncorpus: {total} tiles -> {TILES}/{{images,masks,masks_consensus}}")
     print(f"manifest: {man}")
 

@@ -301,13 +301,27 @@ and simply delineates less precisely.
 
 Alogboshie is a genuine outlier and is reported as such rather than averaged away: 0.297
 pooled, with a predicted built-up fraction of 11.0% against 36.8% present — it
-under-segments by more than threefold, where the other three do not. One candidate
-explanation is resolution provenance rather than morphology: Alogboshie is the finest
-source in the set at 2.01 cm and is downsampled 2.5× to reach the 5 cm training GSD,
-whereas Akweteyman, Alajo and Nima sit at 3.2, 3.6 and 5.2 cm and are barely resampled.
-Downsampling that aggressively alters exactly the high-frequency texture a CNN keys on.
-This is a hypothesis consistent with the ordering, not a demonstrated cause; it is
-testable by re-tiling Alogboshie at its native scale and has not been done.
+under-segments by more than threefold, where the other three do not.
+
+A preprocessing explanation was the obvious first suspect and was tested rather than
+assumed. Alogboshie is the finest source in the set at 2.01 cm and must be reduced 2.49×
+to reach the 5 cm training GSD, whereas Akweteyman, Alajo and Nima sit at 3.2, 3.6 and
+5.2 cm and are reduced by 1.55×, 1.39× and 1.04×. Bilinear resampling reads only a 2×2
+neighbourhood, so beyond roughly a factor of two it under-filters and folds discarded
+detail back as aliasing — precisely the high-frequency texture a CNN keys on — and those
+reduction factors happen to rank the four sites in the same order as their scores. The
+scene was therefore re-fetched with area-average resampling, which integrates the full
+source footprint and is the correct kernel for a true downsample (`scripts/26` now
+selects the kernel from the reduction factor). **The score moved from 0.297 to 0.298.**
+
+The hypothesis is refuted, and that negative is the useful result: Alogboshie's difficulty
+is a real domain difference — settlement morphology, roof material and condition,
+radiometry, season, solar geometry — and not an artefact of how the imagery was prepared.
+This governs what follows. Since no data defect underlies the outlier, excluding it from
+the reported evaluation would be selection on the outcome, and it is retained. For
+training the implication inverts: the hardest domain is the informative one, and a corpus
+assembled to fix cross-site generalisation has more need of Alogboshie than of the sites
+that already transfer.
 
 That the comparison means anything at all rests on a control, and the control is the
 methodological point. A low score at a new site is uninterpretable in isolation — as
