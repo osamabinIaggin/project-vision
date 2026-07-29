@@ -56,6 +56,13 @@ inaugural area of interest.
 > as [`docs/paper/vision_report.pdf`](docs/paper/vision_report.pdf). It is the
 > document to read first; this README is the accompanying implementation
 > reference. Rebuild it with `.venv/bin/python scripts/29_paper_figures.py`.
+>
+> **Interactive screening model.** The Stage-5 hydraulics and the Stage-3 HAND
+> surface are exposed as a live instrument in [`docs/dashboard/`](docs/dashboard/):
+> set a rainfall intensity and a siltation level and read off which of the
+> surveyed network is overwhelmed. Its outputs reproduce the published table
+> exactly. Open `docs/dashboard/index.html` locally, or regenerate the model
+> state with `scripts/30_dashboard_data.py`.
 
 ## 1. Motivation and Problem Formulation
 
