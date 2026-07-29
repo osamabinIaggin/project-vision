@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Odaw Drainage Screening Model</title>
+<style>
+:root {
+  --ground:#f1f3f2; --panel:#ffffff; --panel-2:#e9edec;
+  --ink:#101a1c; --ink-2:#4a5a5c; --ink-3:#7d8d8e;
+  --line:#d3dbd9; --line-2:#c0cac8;
+  --accent:#1f7f76; --accent-soft:#d5e8e5;
+  --crit:#bf3f31; --warn:#c47612; --calm:#7c9294;
+  --water:#2d6fa8;
+  --shadow:0 1px 2px rgba(16,26,28,.06), 0 8px 24px rgba(16,26,28,.05);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ground:#0d1416; --panel:#131d20; --panel-2:#1a2529;
+    --ink:#e4ebea; --ink-2:#9dadae; --ink-3:#6d7d7f;
+    --line:#222f33; --line-2:#2d3d41;
+    --accent:#45b3a7; --accent-soft:#16302f;
+    --crit:#e2584a; --warn:#e0952f; --calm:#5f7d80;
+    --water:#3d86c4;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"] {
+  --ground:#0d1416; --panel:#131d20; --panel-2:#1a2529;
+  --ink:#e4ebea; --ink-2:#9dadae; --ink-3:#6d7d7f;
+  --line:#222f33; --line-2:#2d3d41;
+  --accent:#45b3a7; --accent-soft:#16302f;
+  --crit:#e2584a; --warn:#e0952f; --calm:#5f7d80;
+  --water:#3d86c4;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.3);
+}
+:root[data-theme="light"] {
+  --ground:#f1f3f2; --panel:#ffffff; --panel-2:#e9edec;
+  --ink:#101a1c; --ink-2:#4a5a5c; --ink-3:#7d8d8e;
+  --line:#d3dbd9; --line-2:#c0cac8;
+  --accent:#1f7f76; --accent-soft:#d5e8e5;
+  --crit:#bf3f31; --warn:#c47612; --calm:#7c9294;
+  --water:#2d6fa8;
+  --shadow:0 1px 2px rgba(16,26,28,.06), 0 8px 24px rgba(16,26,28,.05);
+}
+
+* { box-sizing:border-box; }
+body {
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  font-size:15px; line-height:1.5; -webkit-font-smoothing:antialiased;
+}
+.mono { font-family:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+        font-variant-numeric:tabular-nums; }
+.shell { max-width:1240px; margin:0 auto; padding:28px 20px 56px; }
+
+header { border-bottom:1px solid var(--line); padding-bottom:18px; margin-bottom:22px; }
+.eyebrow { font-size:11px; letter-spacing:.14em; text-transform:uppercase;
+           color:var(--accent); font-weight:650; margin:0 0 7px; }
+h1 { font-size:clamp(22px,3.2vw,31px); line-height:1.18; margin:0 0 8px;
+     letter-spacing:-.021em; font-weight:680; text-wrap:balance; }
+.lede { margin:0; color:var(--ink-2); max-width:66ch; font-size:14.5px; }
+
+.grid { display:grid; grid-template-columns:minmax(0,1fr) 372px; gap:20px; align-items:start; }
+@media (max-width:940px){ .grid { grid-template-columns:1fr; } }
+
+.panel { background:var(--panel); border:1px solid var(--line); border-radius:3px;
+         box-shadow:var(--shadow); }
+.panel-hd { display:flex; justify-content:space-between; align-items:baseline;
+            gap:12px; padding:12px 15px; border-bottom:1px solid var(--line); }
+.panel-hd h2 { font-size:12px; letter-spacing:.1em; text-transform:uppercase;
+               margin:0; color:var(--ink-2); font-weight:650; }
+.panel-hd .note { font-size:11.5px; color:var(--ink-3); }
+
+#mapwrap { position:relative; padding:10px; }
+#map { width:100%; display:block; border-radius:2px; cursor:crosshair; }
+.maplegend { display:flex; flex-wrap:wrap; gap:12px 16px; padding:11px 15px;
+             border-top:1px solid var(--line); font-size:11.5px; color:var(--ink-2); }
+.sw { display:inline-flex; align-items:center; gap:6px; }
+.sw i { width:16px; height:3px; border-radius:2px; display:inline-block; }
+.sw i.box { width:11px; height:11px; border-radius:2px; }
+
+.rail { display:flex; flex-direction:column; gap:20px; }
+
+.readout { padding:15px; }
+.big { font-size:41px; line-height:1; letter-spacing:-.03em; font-weight:600; }
+.big .unit { font-size:16px; color:var(--ink-2); letter-spacing:0; margin-left:5px; }
+.sub { color:var(--ink-2); font-size:13px; margin-top:7px; }
+.chips { display:flex; gap:7px; margin-top:13px; flex-wrap:wrap; }
+.chip { font-size:11px; padding:3px 9px; border-radius:99px; border:1px solid var(--line-2);
+        color:var(--ink-2); letter-spacing:.02em; }
+.chip.crit { background:var(--crit); border-color:var(--crit); color:#fff; font-weight:600; }
+.chip.warn { background:var(--warn); border-color:var(--warn); color:#fff; font-weight:600; }
+.chip.ok   { background:var(--accent-soft); border-color:transparent; color:var(--accent); font-weight:600; }
+
+.ctl { padding:14px 15px; border-top:1px solid var(--line); }
+.ctl:first-child { border-top:0; }
+.ctl-hd { display:flex; justify-content:space-between; align-items:baseline; gap:10px; }
+.ctl-hd label { font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+                color:var(--ink-2); font-weight:650; }
+.ctl-val { font-size:16px; font-weight:600; }
+input[type=range] { -webkit-appearance:none; appearance:none; width:100%; height:22px;
+                    background:transparent; margin:9px 0 0; }
+input[type=range]::-webkit-slider-runnable-track { height:3px; background:var(--line-2); border-radius:2px; }
+input[type=range]::-moz-range-track { height:3px; background:var(--line-2); border-radius:2px; }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:17px; height:17px;
+  border-radius:50%; background:var(--accent); border:2.5px solid var(--panel);
+  box-shadow:0 0 0 1px var(--accent); margin-top:-7px; cursor:grab; }
+input[type=range]::-moz-range-thumb { width:12px; height:12px; border-radius:50%;
+  background:var(--accent); border:2.5px solid var(--panel);
+  box-shadow:0 0 0 1px var(--accent); cursor:grab; }
+input[type=range]:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+.ticks { display:flex; justify-content:space-between; font-size:10.5px;
+         color:var(--ink-3); margin-top:2px; }
+.marks { position:relative; height:26px; margin-top:1px; }
+.marks span { position:absolute; transform:translateX(-50%); font-size:10px;
+              color:var(--ink-3); white-space:nowrap; }
+.marks span::before { content:""; position:absolute; left:50%; top:-5px; width:1px;
+                      height:4px; background:var(--line-2); }
+.marks span.nomark { top:13px; font-size:10px; }
+.marks span.nomark::before { display:none; }
+
+#curve { width:100%; display:block; }
+.curvewrap { padding:6px 15px 14px; }
+
+.toggle { display:flex; align-items:flex-start; gap:9px; padding:13px 15px;
+          border-top:1px solid var(--line); cursor:pointer; }
+.toggle input { margin:2px 0 0; accent-color:var(--accent); width:15px; height:15px; flex:none; }
+.toggle span { font-size:12.5px; color:var(--ink-2); line-height:1.45; }
+
+.caveat { margin-top:20px; border:1px solid var(--line); border-left:3px solid var(--warn);
+          border-radius:3px; background:var(--panel); padding:14px 16px; }
+.caveat h3 { margin:0 0 6px; font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+             color:var(--warn); font-weight:680; }
+.caveat p { margin:0 0 7px; font-size:13px; color:var(--ink-2); max-width:88ch; }
+.caveat p:last-child { margin-bottom:0; }
+footer { margin-top:22px; padding-top:14px; border-top:1px solid var(--line);
+         font-size:11.5px; color:var(--ink-3); display:flex; gap:16px; flex-wrap:wrap; }
+a { color:var(--accent); }
+@media (prefers-reduced-motion:reduce){ *{ transition:none!important; animation:none!important; } }
+</style>
+</head>
+<body>
+<div class="shell">
+
+<header>
+  <p class="eyebrow">Project VISION · Stage 3 + Stage 5</p>
+  <h1>Odaw drainage screening model</h1>
+  <p class="lede">Every surveyed drain in the middle Odaw carries a measured cross-section, so the
+  rainfall intensity at which it overflows can be computed directly. Move the two controls to see
+  which of the network survives a given storm, and how far that depends on how much refuse is
+  sitting in the invert.</p>
+</header>
+
+<div class="grid">
+
+  <section class="panel">
+    <div class="panel-hd">
+      <h2>Middle Odaw corridor</h2>
+      <span class="note mono" id="viewnote">760 surveyed segments</span>
+    </div>
+    <div id="mapwrap"><canvas id="map"></canvas></div>
+    <div class="maplegend">
+      <span class="sw"><i style="background:var(--crit)"></i> over capacity</span>
+      <span class="sw"><i style="background:var(--warn)"></i> near capacity</span>
+      <span class="sw"><i style="background:var(--calm)"></i> within capacity</span>
+      <span class="sw"><i class="box" style="background:var(--water);opacity:.55"></i> standing water (HAND)</span>
+      <span class="sw"><i class="box" style="background:transparent;border:1px solid var(--ink-3)"></i> Old Fadama AOI</span>
+    </div>
+  </section>
+
+  <div class="rail">
+
+    <section class="panel">
+      <div class="panel-hd"><h2>Network overwhelmed</h2></div>
+      <div class="readout">
+        <div class="big mono"><span id="km">—</span><span class="unit">km</span></div>
+        <div class="sub"><span class="mono" id="pct">—</span> of the assessed network ·
+          <span class="mono" id="nseg">—</span> segments</div>
+        <div class="chips" id="chips"></div>
+      </div>
+
+      <div class="ctl">
+        <div class="ctl-hd"><label for="rain">Rainfall intensity</label>
+          <span class="ctl-val mono"><span id="rainv">20.8</span> mm/h</span></div>
+        <input type="range" id="rain" min="0" max="100" step="0.5" value="20.8">
+        <div class="marks" id="rainmarks"></div>
+      </div>
+
+      <div class="ctl">
+        <div class="ctl-hd"><label for="silt">Siltation of the invert</label>
+          <span class="ctl-val mono"><span id="siltv">0</span>%</span></div>
+        <input type="range" id="silt" min="0" max="95" step="5" value="0">
+        <div class="ticks"><span>clean</span><span>half full</span><span>near blocked</span></div>
+      </div>
+
+      <div class="ctl">
+        <div class="ctl-hd"><label for="water">Water level above drainage</label>
+          <span class="ctl-val mono"><span id="waterv">0.0</span> m</span></div>
+        <input type="range" id="water" min="0" max="4" step="0.1" value="0">
+        <div class="ticks"><span>0 m</span><span>2 m</span><span>4 m</span></div>
+      </div>
+
+      <label class="toggle">
+        <input type="checkbox" id="incbad">
+        <span>Include the 108 segments with implausible cross-sections — widths of 4–20 cm against
+        depths of 0.2–0.7 m. These are field-campaign entry errors; left in, they supply 91 of the
+        107 worst-ranked segments.</span>
+      </label>
+    </section>
+
+    <section class="panel">
+      <div class="panel-hd"><h2>Siltation response</h2>
+        <span class="note">km failing at current rainfall</span></div>
+      <div class="curvewrap"><canvas id="curve"></canvas></div>
+    </section>
+
+  </div>
+</div>
+
+<div class="caveat">
+  <h3>What this model does and does not do</h3>
+  <p>Two independent screens are shown over the same ground. The <strong>network layer</strong> is a
+  hydraulic capacity calculation: Manning conveyance from each segment's surveyed cross-section,
+  against the runoff its allocated catchment delivers. The <strong>water layer</strong> is a HAND
+  threshold — the terrain lying below a given stage above the drainage network.</p>
+  <p>Neither is a hydrodynamic simulation, and the two are not coupled. No open elevation product
+  resolves Accra's street micro-topography, so routing water across a 30&nbsp;m surface over a flat
+  coastal plain would produce a confident-looking result with no physical content. This shows
+  <em>where the drainage system is overwhelmed</em> and <em>where standing water is possible</em> —
+  not where any particular flow goes.</p>
+  <p>Siltation is a scenario, not an observation. Which drains are actually obstructed is the open
+  question the project leaves; the survey records no usable proxy for it. Rainfall benchmarks come
+  from an ERA5 relation known to understate Accra's convective intensities, so failure counts read
+  as lower bounds.</p>
+</div>
+
+<footer>
+  <span>Drain survey: Open Cities Accra / GARID via OpenStreetMap (ODbL)</span>
+  <span>Terrain: FABDEM V1-2</span>
+  <span>Runoff coefficient C = 0.85</span>
+</footer>
+
+</div>
+
+<script src="data.js"></script>
+<script>
+(function(){
+  const V = window.VISION;
+  if (!V) { document.body.innerHTML = "<p style='padding:2rem'>data.js not loaded.</p>"; return; }
+
+  const css = k => getComputedStyle(document.documentElement).getPropertyValue(k).trim();
+  const map = document.getElementById("map"), mctx = map.getContext("2d");
+  const curve = document.getElementById("curve"), cctx = curve.getContext("2d");
+  const H = V.hand;
+
+  // decode the packed HAND grid: one byte per cell, decimetres above drainage
+  const raw = atob(H.b64);
+  const hand = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) hand[i] = raw.charCodeAt(i);
+
+  // view = the HAND window, in EPSG:32630 metres
+  const view = { w: H.west, n: H.north, W: H.w * H.grid, Hh: H.h * H.grid };
+  const segs = V.segments;
+
+  const el = id => document.getElementById(id);
+  const rain = el("rain"), silt = el("silt"), water = el("water"), incbad = el("incbad");
+
+  // rainfall benchmark marks, positioned along the slider track
+  (function marks(){
+    const box = el("rainmarks"), max = +rain.max;
+    // The three benchmarks sit within 15 mm/h of one another, so full labels
+    // collide on the track; the return periods are ticked and named once.
+    [[V.era5.t2,"2y"],[V.era5.t10,"10y"],[V.era5.t50,"50y"]].forEach(([v,lab])=>{
+      const s = document.createElement("span");
+      s.textContent = lab; s.style.left = (v / max * 100) + "%";
+      box.appendChild(s);
+    });
+    const cap = document.createElement("span");
+    cap.textContent = "ERA5 return period (a known lower bound)";
+    cap.style.cssText = "left:auto;right:0;transform:none;color:var(--ink-3)";
+    cap.className = "nomark";
+    box.appendChild(cap);
+  })();
+
+  function siltIndex(pct){
+    const f = pct / 100, steps = V.steps;
+    let best = 0, bd = 9;
+    for (let i = 0; i < steps.length; i++){
+      const d = Math.abs(steps[i] - f);
+      if (d < bd) { bd = d; best = i; }
+    }
+    return best;
+  }
+
+  function active(){ return incbad.checked ? segs : segs.filter(s => s.p); }
+
+  function state(s, idx, i_rain){
+    const ic = s.i[idx];
+    if (ic === null || ic === undefined) return 0;
+    if (i_rain >= ic) return 2;                 // over capacity
+    if (i_rain >= ic * 0.66) return 1;          // near capacity
+    return 0;                                   // within
+  }
+
+  // The corridor is 7.3 x 11.5 km — a portrait frame that, fitted to width,
+  // would render two and a half thousand pixels tall. Contain it in a capped
+  // box instead and centre what is left over.
+  const MAXH = 660;
+  function fit(){
+    const wrap = map.parentElement;
+    const cw = wrap.clientWidth - 20;
+    const ch = Math.min(Math.round(cw * (view.Hh / view.W)), MAXH);
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    map.style.width = cw + "px"; map.style.height = ch + "px";
+    map.width = Math.round(cw * dpr); map.height = Math.round(ch * dpr);
+    mctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const k = Math.min(cw / view.W, ch / view.Hh);
+    return { cw, ch, k, ox: (cw - view.W * k) / 2, oy: (ch - view.Hh * k) / 2 };
+  }
+
+  let handImg = null, handLevel = -1;
+  function handLayer(level){
+    if (handImg && handLevel === level) return handImg;
+    const c = document.createElement("canvas");
+    c.width = H.w; c.height = H.h;
+    const g = c.getContext("2d"), im = g.createImageData(H.w, H.h);
+    const dm = level * 10, col = hexRGB(css("--water"));
+    for (let i = 0; i < hand.length; i++){
+      const wet = hand[i] <= dm && hand[i] < H.cap_dm;
+      const o = i * 4;
+      im.data[o] = col[0]; im.data[o+1] = col[1]; im.data[o+2] = col[2];
+      im.data[o+3] = wet ? 150 : 0;
+    }
+    g.putImageData(im, 0, 0);
+    handImg = c; handLevel = level;
+    return c;
+  }
+
+  function hexRGB(h){
+    h = h.replace("#","");
+    if (h.length === 3) h = h.split("").map(x=>x+x).join("");
+    return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+  }
+
+  function draw(){
+    const { cw, ch, k, ox, oy } = fit();
+    const idx = siltIndex(+silt.value), i_rain = +rain.value, lvl = +water.value;
+    const X = x => ox + (x - view.w) * k, Y = y => oy + (view.n - y) * k;
+
+    mctx.clearRect(0, 0, cw, ch);
+    mctx.fillStyle = css("--panel-2");
+    mctx.fillRect(ox, oy, view.W * k, view.Hh * k);
+
+    if (lvl > 0){
+      mctx.imageSmoothingEnabled = false;
+      mctx.drawImage(handLayer(lvl), ox, oy, view.W * k, view.Hh * k);
+    }
+
+    // Old Fadama AOI outline
+    const a = V.aoi.utm;
+    mctx.strokeStyle = css("--ink-3"); mctx.lineWidth = 1; mctx.setLineDash([4,3]);
+    mctx.strokeRect(X(a[0]), Y(a[3]), (a[2]-a[0])*k, (a[3]-a[1])*k);
+    mctx.setLineDash([]);
+    mctx.fillStyle = css("--ink-3"); mctx.font = "10px ui-monospace,Menlo,monospace";
+    mctx.fillText("Old Fadama", X(a[0]), Y(a[1]) + 12);
+
+    const cols = [css("--calm"), css("--warn"), css("--crit")];
+    const list = active();
+    // draw calm first so failing segments sit on top
+    for (let pass = 0; pass < 3; pass++){
+      mctx.strokeStyle = cols[pass];
+      mctx.lineWidth = pass === 2 ? 2.4 : (pass === 1 ? 1.7 : 1.1);
+      mctx.lineCap = "round"; mctx.lineJoin = "round";
+      mctx.beginPath();
+      for (const s of list){
+        if (state(s, idx, i_rain) !== pass) continue;
+        const g = s.g;
+        mctx.moveTo(X(g[0][0]), Y(g[0][1]));
+        for (let i = 1; i < g.length; i++) mctx.lineTo(X(g[i][0]), Y(g[i][1]));
+      }
+      mctx.stroke();
+    }
+    stats(list, idx, i_rain);
+    drawCurve(list, i_rain, idx);
+  }
+
+  function stats(list, idx, i_rain){
+    let km = 0, n = 0, tot = 0, near = 0;
+    for (const s of list){
+      tot += s.L;
+      const st = state(s, idx, i_rain);
+      if (st === 2) { km += s.L; n++; }
+      else if (st === 1) near++;
+    }
+    el("km").textContent = (km/1000).toFixed(1);
+    el("pct").textContent = tot ? ((km/tot)*100).toFixed(1) + "%" : "—";
+    el("nseg").textContent = n;
+    el("viewnote").textContent = list.length + " segments · " + (tot/1000).toFixed(1) + " km";
+    const chips = el("chips"); chips.innerHTML = "";
+    const share = tot ? km/tot : 0;
+    const sev = share >= 0.2 ? "crit" : (share >= 0.06 ? "warn" : "ok");
+    const lab = share >= 0.2 ? "widespread failure"
+              : (share >= 0.06 ? "localised failure" : "network coping");
+    add(chips, sev, lab);
+    if (near) add(chips, "", near + " near capacity");
+    if (+silt.value === 0) add(chips, "", "clean invert");
+  }
+  function add(box, cls, text){
+    const d = document.createElement("span");
+    d.className = "chip" + (cls ? " " + cls : ""); d.textContent = text; box.appendChild(d);
+  }
+
+  function drawCurve(list, i_rain, curIdx){
+    const w = curve.parentElement.clientWidth - 30;
+    const h = 132, dpr = Math.min(window.devicePixelRatio || 1, 2);
+    curve.style.width = w + "px"; curve.style.height = h + "px";
+    curve.width = w*dpr; curve.height = h*dpr; cctx.setTransform(dpr,0,0,dpr,0,0);
+    cctx.clearRect(0,0,w,h);
+
+    const pad = { l: 30, r: 6, t: 8, b: 20 };
+    const pts = V.steps.map((f, i) => {
+      let km = 0;
+      for (const s of list) if (state(s, i, i_rain) === 2) km += s.L;
+      return km / 1000;
+    });
+    const vmax = Math.max(0.5, Math.max(...pts) * 1.15);
+    const PX = i => pad.l + (i/(V.steps.length-1)) * (w - pad.l - pad.r);
+    const PY = v => h - pad.b - (v/vmax) * (h - pad.t - pad.b);
+
+    cctx.strokeStyle = css("--line"); cctx.lineWidth = 1;
+    cctx.beginPath(); cctx.moveTo(pad.l, PY(0)); cctx.lineTo(w-pad.r, PY(0)); cctx.stroke();
+    cctx.fillStyle = css("--ink-3");
+    cctx.font = "9.5px ui-monospace,Menlo,monospace";
+    cctx.fillText(vmax.toFixed(0), 4, PY(vmax)+4);
+    cctx.fillText("0", 4, PY(0)+4);
+    ["0%","50%","95%"].forEach((t,k)=>{
+      const x = PX(k===0?0:(k===1?10:19));
+      cctx.fillText(t, x - 8, h - 5);
+    });
+
+    cctx.beginPath();
+    pts.forEach((v,i)=> i ? cctx.lineTo(PX(i), PY(v)) : cctx.moveTo(PX(i), PY(v)));
+    cctx.strokeStyle = css("--crit"); cctx.lineWidth = 2; cctx.stroke();
+    cctx.lineTo(PX(pts.length-1), PY(0)); cctx.lineTo(PX(0), PY(0)); cctx.closePath();
+    cctx.globalAlpha = .12; cctx.fillStyle = css("--crit"); cctx.fill(); cctx.globalAlpha = 1;
+
+    const cx = PX(curIdx), cy = PY(pts[curIdx]);
+    cctx.strokeStyle = css("--ink-3"); cctx.setLineDash([3,3]); cctx.lineWidth = 1;
+    cctx.beginPath(); cctx.moveTo(cx, pad.t); cctx.lineTo(cx, PY(0)); cctx.stroke();
+    cctx.setLineDash([]);
+    cctx.fillStyle = css("--crit");
+    cctx.beginPath(); cctx.arc(cx, cy, 4, 0, 7); cctx.fill();
+    cctx.strokeStyle = css("--panel"); cctx.lineWidth = 1.5; cctx.stroke();
+  }
+
+  function sync(){
+    el("rainv").textContent = (+rain.value).toFixed(1);
+    el("siltv").textContent = silt.value;
+    el("waterv").textContent = (+water.value).toFixed(1);
+    draw();
+  }
+  [rain, silt, water].forEach(i => i.addEventListener("input", sync));
+  incbad.addEventListener("change", sync);
+  window.addEventListener("resize", () => { handImg = null; sync(); });
+  const mq = window.matchMedia("(prefers-color-scheme: dark)");
+  mq.addEventListener && mq.addEventListener("change", () => { handImg = null; sync(); });
+  new MutationObserver(() => { handImg = null; sync(); })
+    .observe(document.documentElement, { attributes:true, attributeFilter:["data-theme"] });
+  sync();
+})();
+</script>
+</body>
+</html>
