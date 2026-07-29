@@ -51,6 +51,12 @@ Old Fadama / Agbogbloshie — the hydraulic terminus of the entire ~400 km²
 catchment and the epicentre of the June 2015 flood disaster — adopted as the
 inaugural area of interest.
 
+> **Technical report.** A standalone 15-page account of the work — motivation,
+> methods, results, negative results, limitations and references — is available
+> as [`docs/paper/vision_report.pdf`](docs/paper/vision_report.pdf). It is the
+> document to read first; this README is the accompanying implementation
+> reference. Rebuild it with `.venv/bin/python scripts/29_paper_figures.py`.
+
 ## 1. Motivation and Problem Formulation
 
 The hydrological dysfunction of Accra is not principally a deficit of
@@ -525,7 +531,8 @@ are lower bounds.
 │   ├── 25_acquire_middle_odaw_labels.sh   # OSM + Open Buildings for the new AOI
 │   ├── 26_build_middle_odaw_tiles.py      # consensus tile corpus at 5 cm
 │   ├── 27_transfer_eval.py                # zero-shot transfer test (+ --control)
-│   └── 28_joint_finetune.py               # leave-one-site-out fine-tuning
+│   ├── 28_joint_finetune.py               # leave-one-site-out + --production
+│   └── 29_paper_figures.py                # builds docs/paper/vision_report.pdf
 └── accra_flood/               # working tree (data dirs are gitignored)
     ├── data/                  # DEM (regenerated)
     ├── drains/                # surveyed drainage network (regenerated)
